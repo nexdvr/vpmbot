@@ -16,6 +16,7 @@ import {
   useThreadMessages,
   useUIMessages,
   type UIMessage,
+
 } from "@convex-dev/agent/react";
 import { useAction, useMutation } from "convex/react";
 
@@ -64,18 +65,13 @@ export default function ChatBot() {
         threadId: currentThreadId,
         // sessionId,
       });
+      setInputValue("");
     } catch (e) {
       if (isRateLimitError(e)) {
         toast.error("You have exceeded the message limit");
         setRateLimited(true);
-        return;
       }
     }
-    finally {
-      setIsLoading(false);
-      setInputValue("");
-    }
-
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -121,6 +117,7 @@ export default function ChatBot() {
 
   if (!mounted) return null;
   if (!open) return null;
+
   return (
     <div className="fixed inset-0  flex items-end sm:items-center justify-center p-4 z-50 " suppressHydrationWarning>
       <Toaster />
@@ -144,7 +141,13 @@ export default function ChatBot() {
         <div className="flex-1 min-h-0  overflow-y-auto p-4 space-y-4 bg-slate-50">
           {/* 
     <MyComponent threadId={threadId}/> */}
-          {threadId && <MyComponent threadId={threadId} onMessagesChange={scrollToBottom} />}
+          {threadId && (
+            <MyComponent
+              threadId={threadId}
+              onMessagesChange={scrollToBottom}
+              setIsLoading={setIsLoading}
+            />
+          )}
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white text-slate-800 border border-slate-200 px-4 py-3 rounded-xl rounded-bl-none">
@@ -195,8 +198,17 @@ export default function ChatBot() {
   );
 }
 
-function MyComponent({ threadId, onMessagesChange }: { threadId: string, onMessagesChange: () => void; }) {
-  const messages = useThreadMessages(
+function MyComponent({
+  threadId,
+  onMessagesChange,
+  setIsLoading,
+}: {
+  threadId: string;
+  onMessagesChange: () => void;
+  setIsLoading: (v: boolean) => void;
+}) {
+
+  const messages = useUIMessages(
     api.agent.listThreadMessages,
     { threadId },
     { initialNumItems: 10, stream: true }
@@ -207,21 +219,30 @@ function MyComponent({ threadId, onMessagesChange }: { threadId: string, onMessa
   }, [messages.results]);
 
   useEffect(() => {
-    onMessagesChange();
-  }, [messages.results, onMessagesChange]);
+    const assistantStartedStreaming = messages.results.some(
+      (m) =>
+        m.role === "assistant" &&
+        m.status === "streaming" &&
+        (m.text?.length ?? 0) > 0
+    );
+
+    if (assistantStartedStreaming) {
+      setIsLoading(false);
+    }
+  }, [messages.results, setIsLoading]);
+
 
   return (
     <div className="space-y-4">
       {messages.results
         .filter((m) => {
-          // Filter out tool result messages
-          if (m.parts) return true;
-          // return !m.parts.some((part) => part.type === "tool-result");
+
+          if (!m.parts) return true;
+          return m.parts.some((part) => part.type === "text");
         })
         .map((m) => (
           <MessageRow key={m.key} message={m} />
         ))}
-
     </div>
   );
 }
@@ -232,17 +253,21 @@ function MyComponent({ threadId, onMessagesChange }: { threadId: string, onMessa
 
 
 function MessageRow({ message }: { message: UIMessage }) {
-  if (!message.role) return null;
-
-  const text = getMessageText(message);
-  if (!text) return null;
-
   const isUser = message.role === "user";
+
+  const [visibleText] = useSmoothText(message.text ?? " ", {
+    // This tells the hook that it's ok to start streaming immediately.
+    // If this was always passed as true, messages that are already done would
+    // also stream in.
+    // IF this was always passed as false (default), then the streaming message
+    // wouldn't start streaming until the second chunk was received.
+    startStreaming: message.status === "streaming",
+  });
 
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <MessageBubble
-        text={text}
+        text={visibleText}
         role={message.role}
         streaming={message.status === "streaming"}
       />
@@ -252,21 +277,6 @@ function MessageRow({ message }: { message: UIMessage }) {
 
 
 
-function AssistantMessage({ message }: { message: UIMessage }) {
-  //   const hasToolParts = message.parts?.some((part) => part.type === "tool-call" || part.type === "tool-result");
-  //   if (hasToolParts) return <ToolMessage message={message} />;
-
-  const [visibleText] = useSmoothText(message.text ?? "", {
-    startStreaming: message.status === "streaming",
-  });
-  console.log("visible ", visibleText);
-
-  return (
-    <div>
-      {/* <MessageBubble message={visibleText} /> */}
-    </div>
-  )
-}
 
 function MessageBubble({
   text,
@@ -277,9 +287,6 @@ function MessageBubble({
   role: "user" | "assistant" | "system";
   streaming?: boolean;
 }) {
-  const [visibleText] = useSmoothText(text, {
-    startStreaming: streaming,
-  });
 
   return (
     <div
@@ -290,41 +297,8 @@ function MessageBubble({
           : "bg-white text-slate-800 border border-slate-200 rounded-bl-none"
       )}
     >
-      <Markdown text={visibleText} />
+      <Markdown text={text || "..."} />
     </div>
   );
 }
-
-function getMessageText(message: UIMessage): string {
-  if (message.text) return message.text;
-
-  if (!message.parts) return "";
-
-  return message.parts
-    .filter((p) => p.type === "text")
-    .map((p: any) => p.text)
-    .join("");
-}
-
-
-function UserMessage({ message }: { message: UIMessage }) {
-  let userMessage = message.text ?? "";
-  try {
-    userMessage = parseUserMessageJSON(message.text).message;
-
-  } catch (e) {
-  }
-  return (
-    <div>
-      {/* <MessageBubble message={userMessage} /> */}
-    </div>
-  )
-}
-
-type UserMessageJSON = {
-  message: string,
-}
-function parseUserMessageJSON(message: string): UserMessageJSON {
-  return JSON.parse(message) as UserMessageJSON;
-};
 
