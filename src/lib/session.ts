@@ -1,4 +1,5 @@
-const SESSION_KEY = "faq_bot_session_id";
+
+const SESSION_KEY = "vpm_bot_session_id";
 
 export function getSessionId(): string | null {
     if (typeof window === "undefined") return null;

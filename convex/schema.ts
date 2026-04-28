@@ -23,6 +23,9 @@ export default defineSchema({
         .index("by_entryId", ["entryId"])
         .index("by_isActive", ["isActive"])
         .index("by_category", ["category"])
-
+    ,
+    users: defineTable({
+        kind:v.literal("anonymous")
+    })
 
 })

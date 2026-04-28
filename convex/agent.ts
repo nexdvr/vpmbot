@@ -14,25 +14,43 @@ const searchContext = createTool({
     description: "Search for context related to this user prompt",
     args: z.object({ query: z.string().describe("Describe the context you're looking for") }),
     handler: async (ctx, { query }) => {
-        const context = await rag.search(ctx, { namespace: "all-users", query });
+        const context = await rag.search(ctx, {
+            namespace: "all-users",
+            query,
+            limit: 5,
+            vectorScoreThreshold: 0.3,
+            chunkContext: { before: 2, after: 1 },  
+        });
         return context.text;
     },
 });
 
 const getAboutCollege = createTool({
-    description: "Search for any  information about VPM RZ Shah College including College Profile, Vision and Mission ,Goals and Objectives,Contact Details ,Address ,Principal Message,Manging Committiee, College Development Committee, And Non Teaching Staff.etc.",
+    description: "Search for any  information about VPM RZ Shah College including College Profile, Vision and Mission ,Goals and Objectives,Contact Details ,Address ,Principal Message,Managing Committee, College Development Committee, And Non Teaching Staff.etc.",
     args: z.object({ query: z.string().describe("Describe the information you're looking for about the college") }),
     handler: async (ctx, { query }) => {
-        const context = await rag.search(ctx, { namespace: "about-VPM", query });
+        const context = await rag.search(ctx, { 
+            namespace: "about-VPM",
+            query,
+            limit: 5,
+            vectorScoreThreshold: 0.3,
+            chunkContext: { before: 2, after: 1 },  
+        });
         return context.text;
     },
 });
 
-const getAddmisionInfo = createTool({
+const getAdmissionInfo = createTool({
     description: "Get information related to admissions in VPM RZ Shah College such as dates,eligibility,procedures etc.",
     args: z.object({ query: z.string().describe("Describe the admission information you're looking for") }),
     handler: async (ctx, { query }) => {
-        const context = await rag.search(ctx, { namespace: "Admission", query });
+        const context = await rag.search(ctx, {
+            namespace: "Admission",
+            query,
+            limit: 5,
+            vectorScoreThreshold: 0.3,
+            chunkContext: { before: 2, after: 1 },  
+        });
         return context.text;
     },
 });
@@ -41,38 +59,54 @@ const getExamInfo = createTool({
     description: "Get information related to exams in VPM RZ Shah College such as exam schedules,timetables,results etc.",
     args: z.object({ query: z.string().describe("Describe the exam information you're looking for") }),
     handler: async (ctx, { query }) => {
-        const context = await rag.search(ctx, { namespace: "Exams", query });
+        const context = await rag.search(ctx, {
+            namespace: "Exams",
+            query,
+            limit: 5,
+            vectorScoreThreshold: 0.3,
+            chunkContext: { before: 2, after: 1 },  
+        });
         return context.text;
     },
 });
 
+const vpmBotTools = {
+    searchContext,
+    getAboutCollege,
+    getAdmissionInfo,
+    getExamInfo,
+};
 
 export const agent = new Agent(components.agent, {
     name: "College Assistant",
     languageModel: openai.chat("gpt-4o-mini"),
     textEmbeddingModel: openai.embedding("text-embedding-3-small"),
-    instructions: `You are a helpful AI assistant embedded on the official website of VPM RZ Shah College.
+    instructions: `You are the official AI assistant for VPM RZ Shah College.
 
-Your role is to help students by answering questions related to the college. This includes admissions dates, eligibility, and procedures; exam schedules, timetables, and results; upcoming events, notices, and announcements; college rules, policies, and general information; and any other official college-related queries.
+## Core Rule
+ALWAYS use a tool before responding. Never answer from memory. If one tool returns no results, try another tool with a rephrased query.
 
-You have access to a tool called searchContext  which searches the college knowledge base, including PDFs, notices, documents, and other official resources.
+## Tool Usage (Mandatory)
+- Questions about vision, mission, principal, staff, committee, contact, address → getAboutCollege
+- Questions about admissions, eligibility, dates, fees, procedures → getAdmissionInfo  
+- Questions about exams, timetables, results, schedules → getExamInfo
+- Everything else college-related → searchContext
+- If unsure which tool → try searchContext first, then the specific tool if needed
 
-You are strongly encouraged to use the searchContext tool for any question related to the college, as the most accurate and up-to-date information is likely contained in the knowledge base.
+## Response Rules
+- Answer ONLY what was asked. No extra information.
+- Use retrieved context only. No assumptions.
+- Use Markdown. Keep it concise.
+- If a source link is available, include it.
+- If all tools return nothing → say: "This information is not currently available in the college records."
+- If the question is not college-related → say: "I can only assist with VPM RZ Shah College-related queries."
 
-When the searchContext tool is used, you must carefully read and understand the retrieved information. Treat the retrieved content as factual and authoritative. Base your answer only on the retrieved sources and do not add assumptions or external knowledge.
+## Format
+- 1–3 sentence answer for simple questions
+- Bullet list only if multiple items are needed
+- Never add filler phrases like "Great question!" or "I hope this helps"`,
 
-For query related to about college goals, vision ,mission,contact details,address,principal message,managing committee, college development committee, non teaching staff etc use the getAboutCollege tool.
-If relevant sources are found, present the answer as a clear list. For each item, include a short explanation of how it answers the user's question and a link to the source document if available. Omit any source that is not relevant to the user's question.
-
-If no relevant information is found, clearly state that the information is not available in the college records.
-
-If a question is not related to the college, politely respond that you can only assist with college-related queries.
-
-Responses must be written in clear and simple language, be concise and easy for students to understand, and use Markdown formatting. Any links should be formatted as link text followed by the URL in parentheses.
-
-If multiple possible answers are found, list all relevant possibilities briefly and do not focus deeply on just one unless the user asks for clarification.`,
-
-    tools: { searchContext, getAboutCollege, getAddmisionInfo, getExamInfo },
+    tools: vpmBotTools,
     maxSteps: 10,
 });
 
@@ -98,7 +132,7 @@ const rateLimiter = new RateLimiter(components.rateLimiter, {
 // Send a message and get AI response with rate limiting
 export const sendMessageToAgent = mutation({
     args: {
-        prompt: v.string(),
+        prompt: v.string(), 
         threadId: v.string(),
         // sessionId: v.string(),
     },

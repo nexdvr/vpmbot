@@ -3,23 +3,20 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Send, MessageCircle } from "lucide-react";
-import toast, { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { isRateLimitError } from "@convex-dev/rate-limiter";
 import { api } from "convex/_generated/api";
 import { getOrCreateSessionId } from "@/lib/session";
 import {
-
   optimisticallySendMessage,
   toUIMessages,
   useSmoothText,
   useThreadMessages,
   useUIMessages,
   type UIMessage,
-
 } from "@convex-dev/agent/react";
 import { useAction, useMutation } from "convex/react";
-
 
 import Markdown from "@/lib/markdown";
 import { string } from "zod/v4";
@@ -27,8 +24,6 @@ interface ChatBotProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-
 
 export default function ChatBot() {
   // const createThread = useMutation(api.agent.createThread);
@@ -39,12 +34,13 @@ export default function ChatBot() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
-  const sendMessageTOAgent = useMutation(api.agent.sendMessageToAgent).withOptimisticUpdate(optimisticallySendMessage(api.agent.listThreadMessages));
+  const sendMessageTOAgent = useMutation(
+    api.agent.sendMessageToAgent,
+  ).withOptimisticUpdate(
+    optimisticallySendMessage(api.agent.listThreadMessages),
+  );
   const [open, setOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
-
-
-
 
   async function handleSendMessage() {
     if (!inputValue.trim()) return;
@@ -84,10 +80,7 @@ export default function ChatBot() {
   function onClose() {
     setOpen(false);
 
-    window.parent.postMessage(
-      { type: "CHAT_CLOSE" },
-      "*"
-    );
+    window.parent.postMessage({ type: "CHAT_CLOSE" }, "*");
 
     console.log("CHAT_CLOSE message sent");
   }
@@ -119,9 +112,12 @@ export default function ChatBot() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0  flex items-end sm:items-center justify-center p-4 z-50 " suppressHydrationWarning>
+    <div
+      className="fixed inset-0  flex items-end sm:items-center justify-center p-4 z-50 "
+      suppressHydrationWarning
+    >
       <Toaster />
-      <div className="bg-white h-100 rounded-2xl shadow-2xl w-full sm:w-96 max-h-[90vh] sm:max-h-150 flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+      <div className="bg-white h-180 rounded-2xl shadow-2xl w-full sm:w-[30rem] max-h-[90vh] sm:max-h-150 flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
         <div className="bg-linear-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MessageCircle className="w-6 h-6" />
@@ -179,7 +175,9 @@ export default function ChatBot() {
                 disabled={isLoading || rateLimited}
               />
               {rateLimited && (
-                <p className="text-sm text-red-500 mt-1">You have exceeded the message limit</p>
+                <p className="text-sm text-red-500 mt-1">
+                  You have exceeded the message limit
+                </p>
               )}
             </div>
             <Button
@@ -192,7 +190,6 @@ export default function ChatBot() {
             </Button>
           </div>
         </div>
-
       </div>
     </div>
   );
@@ -207,15 +204,14 @@ function MyComponent({
   onMessagesChange: () => void;
   setIsLoading: (v: boolean) => void;
 }) {
-
   const messages = useUIMessages(
     api.agent.listThreadMessages,
     { threadId },
-    { initialNumItems: 10, stream: true }
+    { initialNumItems: 10, stream: true },
   );
 
   useEffect(() => {
-    console.log(`Messages`, messages.results)
+    console.log(`Messages`, messages.results);
   }, [messages.results]);
 
   useEffect(() => {
@@ -223,7 +219,7 @@ function MyComponent({
       (m) =>
         m.role === "assistant" &&
         m.status === "streaming" &&
-        (m.text?.length ?? 0) > 0
+        (m.text?.length ?? 0) > 0,
     );
 
     if (assistantStartedStreaming) {
@@ -231,12 +227,10 @@ function MyComponent({
     }
   }, [messages.results, setIsLoading]);
 
-
   return (
     <div className="space-y-4">
       {messages.results
         .filter((m) => {
-
           if (!m.parts) return true;
           return m.parts.some((part) => part.type === "text");
         })
@@ -247,20 +241,10 @@ function MyComponent({
   );
 }
 
-
-
-
-
-
 function MessageRow({ message }: { message: UIMessage }) {
   const isUser = message.role === "user";
 
   const [visibleText] = useSmoothText(message.text ?? " ", {
-    // This tells the hook that it's ok to start streaming immediately.
-    // If this was always passed as true, messages that are already done would
-    // also stream in.
-    // IF this was always passed as false (default), then the streaming message
-    // wouldn't start streaming until the second chunk was received.
     startStreaming: message.status === "streaming",
   });
 
@@ -275,9 +259,6 @@ function MessageRow({ message }: { message: UIMessage }) {
   );
 }
 
-
-
-
 function MessageBubble({
   text,
   role,
@@ -287,18 +268,16 @@ function MessageBubble({
   role: "user" | "assistant" | "system";
   streaming?: boolean;
 }) {
-
   return (
     <div
       className={cn(
         "max-w-[80%] px-4 py-3 rounded-xl text-sm leading-relaxed",
         role === "user"
           ? "bg-blue-600 text-white rounded-br-none"
-          : "bg-white text-slate-800 border border-slate-200 rounded-bl-none"
+          : "bg-white text-slate-800 border border-slate-200 rounded-bl-none",
       )}
     >
       <Markdown text={text || "..."} />
     </div>
   );
 }
-

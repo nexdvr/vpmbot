@@ -21,7 +21,7 @@ export const storeFile = action({
 
         storageId: v.id("_storage"),
         filename: v.string(),
-        category: v.union(v.literal("Exam"), v.literal("Admission")),
+        category: v.union(v.literal("Exams"), v.literal("Admission"), v.literal("about-VPM")),
         text: v.string(),
         validTill: v.optional(v.number()),
     },
@@ -110,24 +110,7 @@ export const getDocById = internalQuery({
     },
 })
 
-// export const listDocuments = query({
-//     args: {},
-//     handler: async (ctx) => {
-//         const docs = await ctx.db
-//             .query("documents")
-//             .withIndex("by_isActive", (q) => q.eq("isActive", true))
-//             .order("desc")
-//             .collect();
 
-//         // Get download URLs for each document
-//         return docs.map(async (doc) => {
-//             const downloadUrl = await ctx.storage.getUrl(doc.storageId)
-//             return { ...doc, downloadUrl }
-//             });
-//     },
-// });
-
-// Get download URL for a specific document
 
 export const listDocuments = query({
     args: {},
