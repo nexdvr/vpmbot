@@ -122,8 +122,8 @@ export default function ChatBot() {
           <div className="flex items-center gap-3">
             <MessageCircle className="w-6 h-6" />
             <div>
-              <h2 className="text-lg font-semibold">College Assistant</h2>
-              <p className="text-blue-100 text-sm">Always here to help</p>
+              <h2 className="text-lg font-semibold">Contact Us</h2>
+              <p className="text-blue-100 text-sm">Always here to help you!</p>
             </div>
           </div>
           <button
